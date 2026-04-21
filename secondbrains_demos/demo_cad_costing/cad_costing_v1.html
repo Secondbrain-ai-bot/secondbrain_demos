@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAD Cost Intelligence — AI Evolution</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --bg:       #0a0c0f;
+  --bg1:      #0f1214;
+  --bg2:      #141820;
+  --bg3:      #1a2030;
+  --border:   #1e2535;
+  --border2:  #263040;
+  --muted:    #3a4a5c;
+  --dim:      #5a6e82;
+  --text:     #c8d8e8;
+  --bright:   #e8f0f8;
+  --amber:    #f0a020;
+  --amber-d:  #a86d0f;
+  --amber-bg: #1a1408;
+  --blue:     #4090d0;
+  --blue-d:   #2060a0;
+  --blue-bg:  #080f1a;
+  --green:    #30c060;
+  --green-d:  #1a7038;
+  --green-bg: #081410;
+  --red:      #d04040;
+  --red-d:    #902020;
+  --red-bg:   #180808;
+  --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --sans: 'IBM Plex Sans', -apple-system, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Subtle grid overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 5rem;
+}
+
+/* Header */
+.page-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+}
+.header-left {}
+.page-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-label::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--amber);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+.page-title {
+  font-family: var(--sans);
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--bright);
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+.page-title span { color: var(--amber); font-weight: 500; }
+.page-sub { font-size: 12px; color: var(--dim); font-family: var(--mono); }
+.header-badge {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--green);
+  border: 1px solid var(--green-d);
+  background: var(--green-bg);
+  padding: 4px 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Era nav */
+.era-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--border2);
+  margin-bottom: 1.5rem;
+  background: var(--bg1);
+}
+.era-btn {
+  padding: 13px 8px;
+  font-size: 11px;
+  font-weight: 400;
+  font-family: var(--mono);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border2);
+  cursor: pointer;
+  color: var(--dim);
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+.era-btn:last-child { border-right: none; }
+.era-btn .en {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.era-btn.active {
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-bottom: 2px solid var(--amber);
+}
+.era-btn.active .en { color: var(--amber-d); }
+
+/* Panels */
+.panel { display: none; animation: fadein 0.2s ease; }
+.panel.active { display: block; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Era badge */
+.era-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  padding: 3px 10px;
+  margin-bottom: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+.era-title {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--bright);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.era-desc {
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+  font-family: var(--mono);
+  max-width: 680px;
+}
+
+/* Metrics */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border2);
+  background: var(--border2);
+}
+.mc {
+  background: var(--bg1);
+  padding: 14px 16px;
+}
+.mc-l {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.mc-v {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* Scene */
+.scene {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  margin-bottom: 1.25rem;
+}
+.scene-bar {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--bg);
+}
+.s-dot { width: 6px; height: 6px; flex-shrink: 0; }
+.scene-body { padding: 16px; }
+
+/* Step cards */
+.scard {
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: border-color 0.2s;
+}
+.scard.active {
+  background: var(--bg2);
+  border-color: var(--amber-d);
+  border-left: 2px solid var(--amber);
+}
+.scard-head { display: flex; align-items: center; gap: 10px; }
+.snum {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  flex-shrink: 0;
+}
+.scard.active .snum { border-color: var(--amber-d); color: var(--amber); }
+.slabel {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text);
+}
+.scard.active .slabel { color: var(--bright); }
+.sdetail {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.6;
+  padding: 8px 0 2px 30px;
+}
+.pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 7px;
+  margin-left: 8px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid;
+  vertical-align: middle;
+}
+.pill-ai    { border-color: var(--blue-d); color: var(--blue); background: var(--blue-bg); }
+.pill-warn  { border-color: var(--red-d);  color: var(--red);  background: var(--red-bg); }
+.pill-ok    { border-color: var(--green-d);color: var(--green);background: var(--green-bg); }
+
+/* Chat */
+.chat-area {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 14px;
+  margin-bottom: 12px;
+  min-height: 180px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.bmsg { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+.bmsg.user { flex-direction: row-reverse; }
+.bavatar {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+  border: 1px solid;
+}
+.btext {
+  max-width: 84%;
+  padding: 9px 12px;
+  font-size: 11px;
+  line-height: 1.65;
+  white-space: pre-line;
+  border: 1px solid;
+}
+
+/* Agent loop */
+.loop-strip { display: flex; gap: 0; margin-bottom: 12px; }
+.ls {
+  flex: 1;
+  padding: 8px 4px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+  margin-right: -1px;
+}
+.ls:last-child { margin-right: 0; }
+.ls.active { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-d); z-index: 1; position: relative; }
+.ls.done   { background: var(--green-bg); color: var(--green); border-color: var(--green-d); }
+
+/* Agent log */
+.alog {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.9;
+  min-height: 130px;
+  max-height: 230px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) var(--bg);
+}
+.aline { display: flex; gap: 10px; }
+.ats    { color: var(--muted); min-width: 60px; }
+.atag   { min-width: 78px; font-weight: 600; }
+.atag.perceive { color: var(--blue); }
+.atag.reason   { color: var(--amber); }
+.atag.act      { color: var(--green); }
+.atag.notify   { color: #c060b0; }
+.amsg   { color: var(--dim); }
+
+/* Cost panel */
+.cpanel { display: flex; gap: 1px; margin-bottom: 12px; background: var(--border2); border: 1px solid var(--border2); }
+.cp { flex: 1; background: var(--bg); padding: 14px 16px; }
+.cp-l {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.cp-v { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--text); }
+.cp-v.over { color: var(--red); }
+
+/* Notice */
+.notice {
+  border: 1px solid;
+  padding: 12px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.65;
+  display: none;
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+}
+.notice.alert { background: var(--red-bg); border-color: var(--red-d); color: #e08080; }
+
+/* Buttons */
+.brow { display: flex; gap: 8px; margin-top: 8px; }
+.brow button {
+  flex: 1;
+  padding: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--bg);
+  color: var(--dim);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.brow button:hover:not(:disabled) { background: var(--bg2); color: var(--text); border-color: var(--muted); }
+.brow button:disabled { opacity: 0.3; cursor: not-allowed; }
+.brow button.pri {
+  border-color: var(--amber-d);
+  color: var(--amber);
+  background: var(--amber-bg);
+}
+.brow button.pri:hover:not(:disabled) { background: #251c0c; border-color: var(--amber); }
+
+/* Insight */
+.insight {
+  background: var(--bg1);
+  border-left: 2px solid var(--amber-d);
+  padding: 10px 16px;
+  margin-top: 1rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.65;
+}
+.insight strong { color: var(--amber); font-weight: 500; }
+
+/* Scan line animation on agent log */
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-label">Foundry · Session Demo · Supply Intelligence</div>
+      <div class="page-title">CAD Cost <span>Intelligence</span></div>
+      <div class="page-sub">// evolution from manual handoff to autonomous agent loop</div>
+    </div>
+    <div class="header-badge">● LIVE DEMO</div>
+  </div>
+
+  <div class="era-nav">
+    <button class="era-btn active" onclick="go(0)"><span class="en">Era 01</span>Manual</button>
+    <button class="era-btn" onclick="go(1)"><span class="en">Era 02</span>Traditional AI</button>
+    <button class="era-btn" onclick="go(2)"><span class="en">Era 03</span>Generative AI</button>
+    <button class="era-btn" onclick="go(3)"><span class="en">Era 04</span>Agentic AI</button>
+  </div>
+
+  <!-- ERA 1 -->
+  <div id="p0" class="panel active">
+    <span class="era-badge" style="background:transparent;color:var(--dim);border-color:var(--border2)">Era 01 — Fully Manual</span>
+    <div class="era-title">Engineer + costing team handoff</div>
+    <div class="era-desc">// Every step is a human action. Drawings travel by email. No cost signal exists until the drawing is finished — and rejected work resets the entire cycle.</div>
+    <div class="metrics">
+      <div class="mc"><div class="mc-l">Cycle time</div><div class="mc-v" style="color:var(--red)">5–10 days</div></div>
+      <div class="mc"><div class="mc-l">Human steps</div><div class="mc-v" style="color:var(--red)">7</div></div>
+      <div class="mc"><div class="mc-l">AI involvement</div><div class="mc-v" style="color:var(--muted)">—</div></div>
+    </div>
+    <div class="scene">
+      <div class="scene-bar">
+        <div class="s-dot" style="background:var(--muted)"></div>
+        Workflow trace — press NEXT STEP to advance
+      </div>
+      <div class="scene-body">
+        <div id="e1c"></div>
+        <div class="brow">
+          <button onclick="nx(1)" id="b1n">[ Next step → ]</button>
+          <button onclick="rs(1)">[ Reset ]</button>
+        </div>
+      </div>
+    </div>
+    <div class="insight"><strong>// KEY POINT</strong>&nbsp; The engineer has zero cost visibility while designing. They learn the cost is wrong after days of work — and the fix requires starting over from scratch.</div>
+  </div>
+
+  <!-- ERA 2 -->
+  <div id="p1" class="panel">
+    <span class="era-badge" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-d)">Era 02 — Traditional AI / ML</span>
+    <div class="era-title">Engineer-driven tool lookup</div>
+    <div class="era-desc">// AI enters to do the calculation — but the engineer still picks the model and enters all parameters by hand. Human judgement drives every step.</div>
+    <div class="metrics">
+      <div class="mc"><div class="mc-l">Cycle time</div><div class="mc-v" style="color:var(--amber)">2–4 days</div></div>
+      <div class="mc"><div class="mc-l">Human steps</div><div class="mc-v" style="color:var(--amber)">5</div></div>
+      <div class="mc"><div class="mc-l">AI involvement</div><div class="mc-v" style="color:var(--blue)">Calculation</div></div>
+    </div>
+    <div class="scene">
+      <div class="scene-bar">
+        <div class="s-dot" style="background:var(--blue)"></div>
+        Workflow trace — press NEXT STEP to advance
+      </div>
+      <div class="scene-body">
+        <div id="e2c"></div>
+        <div class="brow">
+          <button onclick="nx(2)" id="b2n">[ Next step → ]</button>
+          <button onclick="rs(2)">[ Reset ]</button>
+        </div>
+      </div>
+    </div>
+    <div class="insight"><strong>// KEY POINT</strong>&nbsp; AI speeds up the calculation — but garbage-in is the failure mode. Wrong model selection or wrong parameter entry produces a confidently wrong estimate.</div>
+  </div>
+
+  <!-- ERA 3 -->
+  <div id="p2" class="panel">
+    <span class="era-badge" style="background:var(--amber-bg);color:var(--amber);border-color:var(--amber-d)">Era 03 — Generative AI (LLM)</span>
+    <div class="era-title">Describe the part — LLM selects the tool</div>
+    <div class="era-desc">// No library browsing. The engineer describes the part in plain language. The LLM reads intent, picks the right costing model, prompts for missing inputs, returns the estimate.</div>
+    <div class="metrics">
+      <div class="mc"><div class="mc-l">Cycle time</div><div class="mc-v" style="color:var(--green)">2–4 hours</div></div>
+      <div class="mc"><div class="mc-l">Human steps</div><div class="mc-v" style="color:var(--green)">2</div></div>
+      <div class="mc"><div class="mc-l">AI involvement</div><div class="mc-v" style="color:var(--amber)">Select + Calc</div></div>
+    </div>
+    <div class="scene">
+      <div class="scene-bar">
+        <div class="s-dot" style="background:var(--amber)"></div>
+        Conversation simulation — press SEND to advance
+      </div>
+      <div class="scene-body">
+        <div class="chat-area" id="e3c"></div>
+        <div class="brow">
+          <button class="pri" onclick="nx(3)" id="b3n">[ Send next message → ]</button>
+          <button onclick="rs(3)">[ Reset ]</button>
+        </div>
+      </div>
+    </div>
+    <div class="insight"><strong>// KEY POINT</strong>&nbsp; The engineer works in natural language — no tool knowledge required. But the engineer still initiates every cycle. The agent loop has not closed yet.</div>
+  </div>
+
+  <!-- ERA 4 -->
+  <div id="p3" class="panel">
+    <span class="era-badge" style="background:var(--green-bg);color:var(--green);border-color:var(--green-d)">Era 04 — Agentic AI</span>
+    <div class="era-title">Agent watches. Engineer designs. Loop closed.</div>
+    <div class="era-desc">// The agent monitors the .stp file on every save. Reads geometry and BOM autonomously. Selects and calls costing tools. Surfaces real-time estimate. No human trigger at any step.</div>
+    <div class="metrics">
+      <div class="mc"><div class="mc-l">Cycle time</div><div class="mc-v" style="color:var(--green)">Real-time</div></div>
+      <div class="mc"><div class="mc-l">Human steps</div><div class="mc-v" style="color:var(--green)">0</div></div>
+      <div class="mc"><div class="mc-l">AI involvement</div><div class="mc-v" style="color:var(--green)">Full loop</div></div>
+    </div>
+    <div class="scene">
+      <div class="scene-bar">
+        <div class="s-dot" style="background:var(--green)" id="agdot"></div>
+        <span id="ast">Agent standby — press INITIALISE to begin</span>
+      </div>
+      <div class="scene-body">
+        <div class="loop-strip">
+          <div class="ls" id="ls0">Perceive</div>
+          <div class="ls" id="ls1">Reason</div>
+          <div class="ls" id="ls2">Act</div>
+          <div class="ls" id="ls3">Notify</div>
+        </div>
+        <div class="alog" id="alog"><span style="color:var(--muted)">// agent idle — awaiting trigger</span></div>
+        <div class="cpanel" id="cpanel" style="display:none">
+          <div class="cp"><div class="cp-l">Estimated cost</div><div class="cp-v over">₹23.4L</div></div>
+          <div class="cp"><div class="cp-l">vs. budget (₹20L)</div><div class="cp-v over">+₹3.4L</div></div>
+          <div class="cp"><div class="cp-l">Confidence band</div><div class="cp-v" style="color:var(--amber)">±15%</div></div>
+        </div>
+        <div class="notice alert" id="anotice">
+          [ALERT] Bracket_Assy_v3.stp — estimated ₹23.4L exceeds ₹20L ceiling by ₹3.4L (+17%).<br>
+          Design review triggered. Suggested corrective: substitute EN8 steel OR relax tolerances on non-critical bore faces.<br>
+          Stakeholders notified: Procurement Head, Design Lead, Project Manager.
+        </div>
+        <div class="brow">
+          <button class="pri" id="abtn" onclick="runAgent()">[ Initialise agent → ]</button>
+          <button onclick="resetAgent()">[ Reset ]</button>
+        </div>
+      </div>
+    </div>
+    <div class="insight"><strong>// KEY POINT</strong>&nbsp; The loop is closed. Cost is no longer a gate at the end of design — it is a continuous signal during the design act. Expensive decisions are caught while there is still time to change them cheaply.</div>
+  </div>
+
+</div>
+
+<script>
+function go(n) {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('p' + i).classList.toggle('active', i === n);
+    document.querySelectorAll('.era-btn')[i].classList.toggle('active', i === n);
+  }
+}
+
+const e1 = [
+  { l: 'Engineer completes CAD drawing', d: '// Full geometry drawn. No cost awareness at this stage — engineer works to functional requirements only.' },
+  { l: 'Drawing emailed to costing team', d: '// Average 1-day wait just to be picked up. No status visibility for the engineer.' },
+  { l: 'Costing team manually breaks down BOM', d: '// Each part priced from rate cards and experience. 2–3 days for complex assemblies.' },
+  { l: 'Estimate compiled and sent to approver', d: '// Approver receives a spreadsheet. No traceability back to drawing geometry.' },
+  { l: 'Decision — approved or rejected?', d: '', isD: true },
+  { l: 'Engineer reworks drawing (if rejected)', d: '// Modifies geometry to reduce cost — with no real-time signal on what is driving cost. Pure guesswork.' },
+  { l: 'Re-enters the costing queue', d: '// Entire cycle restarts from step 2. Each rejection loop adds 3–5 more days.' },
+];
+
+const e2 = [
+  { l: 'Engineer completes CAD drawing', d: '// Drawing finished. Engineer must now find the right costing model.' },
+  { l: 'Engineer browses the AI tool library', d: '// Manually searches internal catalogue — machined part? Sheet metal? Weldment? Wrong pick = wrong estimate.', isH: true },
+  { l: 'Engineer enters parameters by hand', d: '// Material, dimensions, tolerances, surface finish — all typed manually. No read-from-file. Error-prone.', isH: true },
+  { l: 'AI/ML model outputs cost estimate', d: '// Calculation is fast and usually accurate — but only as good as the parameters entered.', isAI: true },
+  { l: 'Costing team reviews and approves', d: '// Team may distrust the AI output and re-check manually. Approval adds another day.' },
+  { l: 'Approved or rejected — loop if rejected', d: '// Rejection sends engineer back to step 1. Rework loop is shorter but still costly.', isD: true },
+];
+
+const e3 = [
+  { r: 'user', t: 'I have a CNC machined bracket in EN24 steel. 18 solid bodies, ~420 cm³ total volume, tight tolerances on 4 bore faces, anodised finish.' },
+  { r: 'ai',   t: '> Parsing input.\n> Classification: machined · ferrous · medium-high complexity.\n> Model selected: parametric_machining_v2\n\nQuery before execution — what is the batch quantity?\nUnit cost shifts significantly between prototype (1–5 pcs) and production batch (50+).' },
+  { r: 'user', t: 'Prototype — 3 pieces.' },
+  { r: 'ai',   t: '> Executing cost model...\n\n  Material  (EN24 · 420 cm³)    ₹4.2L\n  Machining (18 bodies · IT6)   ₹11.8L\n  Anodising (medium area)       ₹2.1L\n  Overheads + margin            ₹5.3L\n  ─────────────────────────────\n  Total                         ₹23.4L\n\nConfidence band: ±15% | Unit cost: ₹7.8L/pc\n\n[WARNING] Exceeds ₹20L ceiling by ₹3.4L.\nModel alternate with EN8 steel?' },
+  { r: 'user', t: 'Yes. And send the costing sheet for approval.' },
+  { r: 'ai',   t: '> EN8 alternate: ₹19.1L — saving ₹4.3L. Within budget.\n> Costing sheet dispatched to approval queue.\n\nNote: EN8 is viable if bore faces can accept lower tensile strength. Flag for design checklist.' },
+];
+
+let curs = { 1: -1, 2: -1, 3: 0 };
+
+function renderSteps(era, steps, cid, bid) {
+  const c = document.getElementById(cid);
+  const cur = curs[era];
+  c.innerHTML = steps.slice(0, cur + 1).map((s, i) => {
+    const active = i === cur;
+    const pills = (s.isAI ? '<span class="pill pill-ai">AI</span>' : '') +
+                  (s.isH  ? '<span class="pill pill-warn">Manual</span>' : '') +
+                  (s.isD  ? '<span class="pill pill-warn">Decision</span>' : '');
+    return `<div class="scard${active ? ' active' : ''}">
+      <div class="scard-head">
+        <div class="snum">${String(i+1).padStart(2,'0')}</div>
+        <div class="slabel">${s.l}${pills}</div>
+      </div>
+      ${active && s.d ? `<div class="sdetail">${s.d}</div>` : ''}
+    </div>`;
+  }).join('');
+  if (bid) document.getElementById(bid).disabled = cur >= steps.length - 1;
+}
+
+function renderE1() { renderSteps(1, e1, 'e1c', 'b1n'); }
+function renderE2() { renderSteps(2, e2, 'e2c', 'b2n'); }
+function renderE3() {
+  const c = document.getElementById('e3c');
+  c.innerHTML = e3.slice(0, curs[3]).map(m => {
+    const u = m.r === 'user';
+    return `<div class="bmsg${u ? ' user' : ''}">
+      <div class="bavatar" style="${u
+        ? 'background:transparent;color:var(--dim);border-color:var(--border2)'
+        : 'background:var(--green-bg);color:var(--green);border-color:var(--green-d)'}">
+        ${u ? 'ENG' : 'AGT'}
+      </div>
+      <div class="btext" style="${u
+        ? 'background:var(--bg2);color:var(--dim);border-color:var(--border2)'
+        : 'background:var(--bg);color:var(--text);border-color:var(--green-d)'}">
+        ${m.t}
+      </div>
+    </div>`;
+  }).join('');
+  const b = document.getElementById('b3n');
+  b.disabled = curs[3] >= e3.length;
+  b.textContent = curs[3] >= e3.length ? '[ Conversation complete ]' : '[ Send next message → ]';
+}
+
+function nx(era) {
+  if (era === 1 && curs[1] < e1.length - 1) { curs[1]++; renderE1(); }
+  else if (era === 2 && curs[2] < e2.length - 1) { curs[2]++; renderE2(); }
+  else if (era === 3 && curs[3] < e3.length) { curs[3]++; renderE3(); }
+}
+function rs(era) {
+  curs[era] = era === 3 ? 0 : -1;
+  if (era === 1) renderE1();
+  else if (era === 2) renderE2();
+  else renderE3();
+}
+
+renderE1(); renderE2(); renderE3();
+
+// AGENT
+let agRunning = false, agLogs = [];
+
+function addLog(ph, msg) {
+  const ts = new Date().toTimeString().slice(0, 8);
+  agLogs.push({ ts, ph, msg });
+  const el = document.getElementById('alog');
+  el.innerHTML = agLogs.map(l =>
+    `<div class="aline"><span class="ats">${l.ts}</span><span class="atag ${l.ph}">[${l.ph.toUpperCase()}]</span><span class="amsg">${l.msg}</span></div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function setLoop(a) {
+  const phases = ['perceive','reason','act','notify'];
+  const idx = phases.indexOf(a);
+  phases.forEach((_, i) => {
+    const el = document.getElementById('ls' + i);
+    el.classList.remove('active','done');
+    if (i < idx) el.classList.add('done');
+    else if (i === idx) el.classList.add('active');
+  });
+}
+
+function allDone() {
+  [0,1,2,3].forEach(i => {
+    const el = document.getElementById('ls' + i);
+    el.classList.remove('active');
+    el.classList.add('done');
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runAgent() {
+  if (agRunning) return;
+  agRunning = true; agLogs = [];
+  document.getElementById('alog').innerHTML = '';
+  document.getElementById('cpanel').style.display = 'none';
+  document.getElementById('anotice').style.display = 'none';
+  document.getElementById('abtn').disabled = true;
+  document.getElementById('abtn').textContent = '[ Running... ]';
+  document.getElementById('ast').textContent = 'Agent active — autonomous loop in progress';
+
+  setLoop('perceive');
+  await sleep(400);  addLog('perceive', 'fs_watch: change detected → Bracket_Assy_v3.stp');
+  await sleep(650);  addLog('perceive', 'init STEP AP214 parser...');
+  await sleep(700);  addLog('perceive', 'geometry_tree: 18 solid bodies extracted. type=machined');
+  await sleep(600);  addLog('perceive', 'bom_read: material=EN24_steel · tol=IT6 on 4 bore faces');
+  await sleep(550);  addLog('perceive', 'process_infer: CNC_milling + anodising');
+
+  setLoop('reason');
+  await sleep(500);  addLog('reason',   'classify: machined · ferrous · complexity=medium_high');
+  await sleep(600);  addLog('reason',   'tool_select → parametric_machining_v2');
+  await sleep(500);  addLog('reason',   'batch_ctx: qty=3 (prototype) → low_vol_factor applied');
+  await sleep(650);  addLog('reason',   'rate_card_pull: EN24=₹142/kg [live]');
+  await sleep(500);  addLog('reason',   'threshold_check: budget=₹20L');
+
+  setLoop('act');
+  await sleep(550);  addLog('act',      'tool_call: material_cost_model → ₹4.2L');
+  await sleep(600);  addLog('act',      'tool_call: machining_model (18 bodies · IT6) → ₹11.8L');
+  await sleep(500);  addLog('act',      'tool_call: finishing_model (anodise) → ₹2.1L');
+  await sleep(600);  addLog('act',      'tool_call: overhead_model → ₹5.3L');
+  await sleep(500);  addLog('act',      'aggregate: ₹23.4L — THRESHOLD BREACH +₹3.4L (+17%)');
+  await sleep(400);  addLog('act',      'report_gen: costing_report_v3.pdf → logged');
+
+  setLoop('notify');
+  await sleep(500);  addLog('notify',   'dispatch → Procurement_Head');
+  await sleep(300);  addLog('notify',   'dispatch → Design_Lead');
+  await sleep(300);  addLog('notify',   'dispatch → Project_Manager');
+  await sleep(450);  addLog('notify',   'cad_panel_update: cost_overlay active. cycle=COMPLETE');
+
+  allDone();
+  document.getElementById('ast').textContent = 'Cycle complete — estimate surfaced before file save';
+  document.getElementById('cpanel').style.display = 'flex';
+  document.getElementById('anotice').style.display = 'block';
+  document.getElementById('abtn').disabled = false;
+  document.getElementById('abtn').textContent = '[ Run again → ]';
+  agRunning = false;
+}
+
+function resetAgent() {
+  agRunning = false; agLogs = [];
+  document.getElementById('alog').innerHTML = '<span style="color:var(--muted)">// agent idle — awaiting trigger</span>';
+  document.getElementById('cpanel').style.display = 'none';
+  document.getElementById('anotice').style.display = 'none';
+  document.getElementById('ast').textContent = 'Agent standby — press INITIALISE to begin';
+  document.getElementById('abtn').disabled = false;
+  document.getElementById('abtn').textContent = '[ Initialise agent → ]';
+  [0,1,2,3].forEach(i => {
+    const el = document.getElementById('ls' + i);
+    el.classList.remove('active','done');
+  });
+}
+</script>
+</body>
+</html>
