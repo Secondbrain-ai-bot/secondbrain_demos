@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SAIL Port & Vessel Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  html,body,#root{margin:0;padding:0;height:100%;background:#070d1a;overflow:hidden}
+  *{box-sizing:border-box;margin:0;padding:0}
+  ::-webkit-scrollbar{width:3px}
+  ::-webkit-scrollbar-thumb{background:#1e293b}
+
+  @keyframes pulse      {0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes fadeIn     {from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideIn    {from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes logEntry   {0%{opacity:0;transform:translateX(-8px);background:#1d3a60} 60%{background:#0d2040} 100%{opacity:1;transform:translateX(0);background:transparent}}
+  @keyframes impactPop  {0%{opacity:0;transform:scale(0.97)} 60%{transform:scale(1.01)} 100%{opacity:1;transform:scale(1)}}
+  @keyframes actionSlide{from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)}}
+  @keyframes ripple     {0%{transform:scale(0.8);opacity:1} 100%{transform:scale(2.2);opacity:0}}
+  @keyframes checkIn    {from{transform:scale(0)} to{transform:scale(1)}}
+  @keyframes shimmer    {0%{background-position:-200% 0} 100%{background-position:200% 0}}
+  @keyframes borderBlue {0%,100%{border-color:rgba(59,130,246,0.35)} 50%{border-color:rgba(59,130,246,0.9)}}
+  @keyframes borderAmber{0%,100%{border-color:rgba(245,158,11,0.35)} 50%{border-color:rgba(245,158,11,0.9)}}
+  @keyframes borderRed  {0%,100%{border-color:rgba(239,68,68,0.35)} 50%{border-color:rgba(239,68,68,0.9)}}
+  @keyframes glowBlue   {0%,100%{box-shadow:0 0 0 rgba(59,130,246,0)} 50%{box-shadow:0 0 22px rgba(59,130,246,0.14)}}
+  @keyframes glowRed    {0%,100%{box-shadow:0 0 0 rgba(239,68,68,0)} 50%{box-shadow:0 0 22px rgba(239,68,68,0.14)}}
+
+  .pulse-anim   { animation: pulse 1s infinite; }
+  .fadein-anim  { animation: fadeIn 0.4s ease forwards; }
+  .fadein6-anim { animation: fadeIn 0.6s ease forwards; }
+  .slidein-anim { animation: slideIn 0.35s ease forwards; }
+  .log-new      { animation: logEntry 0.55s ease forwards; }
+
+  .hl-blue  { animation: borderBlue 1.4s ease-in-out infinite, glowBlue 1.4s ease-in-out infinite; }
+  .hl-red   { animation: borderRed  1.4s ease-in-out infinite, glowRed  1.4s ease-in-out infinite; }
+
+  .action-card { transition: all 0.18s ease; cursor:pointer; }
+  .action-card:hover:not(.action-sel):not(.action-dim) { transform:translateX(3px); filter:brightness(1.12); }
+  .action-sel  { filter:brightness(1.18); }
+  .action-dim  { opacity:0.35; cursor:not-allowed; }
+  .check-anim  { animation: checkIn 0.28s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
+  .shimmer-btn { background:linear-gradient(90deg,#1d4ed8 0%,#0ea5e9 40%,#38bdf8 50%,#0ea5e9 60%,#1d4ed8 100%); background-size:200% 100%; animation:shimmer 2s infinite linear; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ─── STATIC DATA ─── */
+/* Inventory = projected buffer on arrival (baseline, no disruption)
+   Threshold  = minimum acceptable buffer (shutdown risk below this)
+   Bhilai: 14d baseline arrival buffer, 5d minimum
+   Other plants: comfortable range, same 5d threshold            */
+const PLANTS = [
+  {id:"bhilai",  short:"BSP",name:"Bhilai",  inventory:14,threshold:5},
+  {id:"rourkela",short:"RSP",name:"Rourkela",inventory:18,threshold:5},
+  {id:"bokaro",  short:"BSL",name:"Bokaro",  inventory:22,threshold:5},
+  {id:"durgapur",short:"DSP",name:"Durgapur",inventory:26,threshold:5},
+];
+const PORTS = [
+  {id:"paradip",   name:"Paradip",   vessels:14,baseline:6},
+  {id:"vizag",     name:"Vizag",     vessels:9, baseline:6},
+  {id:"gangavaram",name:"Gangavaram",vessels:11,baseline:6},
+  {id:"haldia",    name:"Haldia",    vessels:7, baseline:6},
+];
+const POS = {
+  haypoint:   {x:68, y:290},
+  singapore:  {x:230,y:255},
+  paradip:    {x:418,y:168},
+  vizag:      {x:402,y:205},
+  gangavaram: {x:400,y:218},
+  haldia:     {x:432,y:144},
+  bhilai:     {x:372,y:130},
+  rourkela:   {x:395,y:122},
+  bokaro:     {x:418,y:110},
+  durgapur:   {x:435,y:102},
+};
+const ROUTE_NORMAL=[{x:68,y:290},{x:130,y:268},{x:200,y:248},{x:270,y:222},{x:340,y:195},{x:418,y:168}];
+const ROUTE_DEV=[{x:68,y:290},{x:130,y:268},{x:200,y:248},{x:230,y:255}];
+const VESSEL_POS=[{x:200,y:248},{x:230,y:255},{x:230,y:255}];
+
+/* step 0=nominal, 1=signals flash, 2=impact highlight, 3=actions, 4=executed */
+const ALL_LOGS = [
+  {t:"06:14",m:"Vessel AIS updated — Day 5 transit on route",               c:"#64748b"},
+  {t:"11:32",m:"Paradip anchorage: 14 vessels waiting — est. +4d port delay",c:"#f59e0b"},
+  {t:"14:07",m:"Route deviation — MV GLORY SOVEREIGN heading to Singapore",  c:"#f59e0b"},
+  {t:"14:09",m:"ETA recalculated: vessel delay +6d · port congestion +4d",   c:"#ef4444"},
+  {t:"14:11",m:"Bhilai projected buffer on arrival: 4 days (min: 5 days)",   c:"#ef4444"},
+  {t:"14:11",m:"ALERT — Buffer below minimum. Shutdown risk. Act now.",       c:"#ef4444"},
+];
+
+/* ACTIONS
+   Baseline buffer on arrival:          14 days
+   Disruption extra delay:              +10 days (6d vessel + 4d port congestion)
+   Buffer without intervention:         14 - 10 = 4 days  → BELOW 5d minimum
+
+   Priority rake saving:                2.5 days (rail 4d normal → 1.5d priority)
+   Buffer with priority rake:           14 - 10 + 2.5 = 6.5 days → ABOVE 5d minimum
+
+   Spot coal: emergency 20,000T sourced domestically — adds ~3d to runway
+   BF reduction: 10% throughput cut — extends existing stock by ~1.5d
+*/
+const ACTIONS = [
+  {id:"rake",label:"Priority rake allocation",
+   icon:"🚂",badge:"RECOMMENDED",color:"#22c55e",riskLabel:"Risk: LOW",
+   detail:"Emergency FOIS escalation. Rail leg cut from 4 days to 1.5 days — saving 2.5 days. Rakes pre-positioned at Paradip.",
+   cost:"Est. Rs 0.4 Cr logistics premium",
+   metrics:[["Buffer on arrival","6.5 days"],["Minimum required","5 days"],["BF throughput","100%"],["Cost impact","Rs 0.4 Cr"]],
+   outcomeColor:"#22c55e",
+   outcome:"Rail leg: 4d → 1.5d. Saving: 2.5 days. Buffer on arrival: 6.5 days — above 5 day minimum. Production protected."},
+  {id:"spot",label:"Emergency spot procurement",
+   icon:"⚓",badge:"CONTINGENCY",color:"#f59e0b",riskLabel:"Risk: MEDIUM",
+   detail:"Emergency tender for 20,000T spot cargo — Indonesian or South African HCC. Arrives via alternate vessel in ~3 days.",
+   cost:"Rs 1.6 Cr premium over contract price",
+   metrics:[["Spot coal secured","20,000T"],["Buffer extended","~3 days"],["Combined buffer","~7 days"],["Premium cost","Rs 1.6 Cr"]],
+   outcomeColor:"#f59e0b",
+   outcome:"Spot cargo adds ~3 days to runway. Combined buffer ~7 days — above minimum. Higher cost but production secured."},
+  {id:"bf",label:"Reduce BF throughput",
+   icon:"🔥",badge:"LAST RESORT",color:"#ef4444",riskLabel:"Risk: HIGH",
+   detail:"10% burden rate reduction across Blast Furnaces 1–3. Extends existing coal runway by ~1.5 days. Production loss immediate.",
+   cost:"Rs 5–7 Cr hot metal production loss",
+   metrics:[["Runway extended","~1.5 days"],["Output reduction","10%"],["Production loss","Rs 6 Cr"],["Buffer on arrival","~5.5 days"]],
+   outcomeColor:"#ef4444",
+   outcome:"Marginal buffer gain. 10% output loss locks in Rs 6 Cr production gap. Buys time only — root cause unresolved."},
+];
+
+/* ─── helpers ─── */
+function ptStr(pts){return pts.map(function(p,i){return (i===0?"M":"L")+p.x+","+p.y;}).join(" ");}
+function invColor(v,t){return v>t+5?"#22c55e":v>t?"#f59e0b":"#ef4444";}
+function congColor(v,b){var r=v/b;return r<1.5?"#22c55e":r<2?"#f59e0b":"#ef4444";}
+
+function useAnimNum(target){
+  var ref=useRef(target);
+  var s=useState(target); var val=s[0]; var setVal=s[1];
+  useEffect(function(){
+    var from=ref.current; var diff=target-from;
+    if(!diff)return;
+    var t0=performance.now(); var dur=700;
+    function tick(now){
+      var p=Math.min((now-t0)/dur,1);
+      var e=p<0.5?2*p*p:-1+(4-2*p)*p;
+      setVal(Math.round(from+diff*e));
+      if(p<1)requestAnimationFrame(tick);else ref.current=target;
+    }
+    requestAnimationFrame(tick);
+  },[target]);
+  return val;
+}
+
+/* ─── PulseRing ─── */
+function PulseRing({x,y,color}){
+  return React.createElement(React.Fragment,null,
+    React.createElement("circle",{cx:x,cy:y,r:16,fill:"none",stroke:color,strokeWidth:1,opacity:0.15,children:[
+      React.createElement("animate",{key:"a1",attributeName:"r",values:"10;22;10",dur:"2s",repeatCount:"indefinite"}),
+      React.createElement("animate",{key:"a2",attributeName:"opacity",values:"0.3;0;0.3",dur:"2s",repeatCount:"indefinite"}),
+    ]}),
+    React.createElement("circle",{cx:x,cy:y,r:10,fill:"none",stroke:color,strokeWidth:1,opacity:0.2,children:[
+      React.createElement("animate",{key:"a3",attributeName:"r",values:"6;16;6",dur:"2s",begin:"0.5s",repeatCount:"indefinite"}),
+      React.createElement("animate",{key:"a4",attributeName:"opacity",values:"0.4;0;0.4",dur:"2s",begin:"0.5s",repeatCount:"indefinite"}),
+    ]})
+  );
+}
+
+/* ─── MapNode ─── */
+function MapNode({x,y,color,r=6,label="",dir="right",pulse=false}){
+  var pad=r+6;
+  var lx=dir==="right"?x+pad:dir==="left"?x-pad:x;
+  var ly=dir==="top"?y-pad:dir==="bottom"?y+pad:y;
+  var anchor=dir==="right"?"start":dir==="left"?"end":"middle";
+  return (
+    <g>
+      {pulse&&<PulseRing x={x} y={y} color={color}/>}
+      <circle cx={x} cy={y} r={r} fill={color} opacity={0.85}/>
+      <circle cx={x} cy={y} r={r} fill="none" stroke={color} strokeWidth={1.5} opacity={0.35}/>
+      {label&&<text x={lx} y={ly} fill="#94a3b8" fontSize={9.5} fontFamily="monospace" dominantBaseline="middle" textAnchor={anchor}>{label}</text>}
+    </g>
+  );
+}
+
+/* ─── Map ─── */
+function SailMap({step}){
+  var deviated=step>=1;
+  var alerted=step>=2;
+  var vp=VESSEL_POS[Math.min(deviated?1:0,2)];
+  var vc=!deviated?"#22c55e":"#ef4444";
+  var paradipV=deviated?16:14;
+  var bhilaiInv=alerted?4:14;
+  var etaDay=deviated?18:12;
+  var etaDelay=deviated?6:0;
+  var statusLabel=!deviated?"NOMINAL":"ALERT";
+  var statusColor=!deviated?"#22c55e":"#ef4444";
+  var railColor=alerted?"#ef4444":"#1e3a5f";
+  var railW=alerted?1.8:0.8;
+  return (
+    <svg viewBox="0 0 600 400" style={{width:"100%",height:"100%",display:"block"}}>
+      <defs>
+        <radialGradient id="oceanBg" cx="35%" cy="65%" r="75%">
+          <stop offset="0%" stopColor="#0c1e3a"/><stop offset="100%" stopColor="#060c18"/>
+        </radialGradient>
+        <pattern id="gridPat" width="30" height="30" patternUnits="userSpaceOnUse">
+          <path d="M30,0 L0,0 0,30" fill="none" stroke="#0d2040" strokeWidth="0.4"/>
+        </pattern>
+      </defs>
+      <rect width="600" height="400" fill="url(#oceanBg)"/>
+      <rect width="600" height="400" fill="url(#gridPat)" opacity="0.6"/>
+      <text x="68"  y="335" fill="#152840" fontSize="10" fontFamily="monospace" textAnchor="middle" letterSpacing="2.5">AUSTRALIA</text>
+      <text x="270" y="340" fill="#152840" fontSize="10" fontFamily="monospace" textAnchor="middle" letterSpacing="2.5">INDIAN OCEAN</text>
+      <text x="460" y="68"  fill="#152840" fontSize="10" fontFamily="monospace" textAnchor="middle" letterSpacing="2.5">INDIA</text>
+      {[100,160,220,280,340].map(function(y){return <line key={y} x1="0" y1={y} x2="600" y2={y} stroke="#0d2040" strokeWidth="0.5" strokeDasharray="5 10"/>;} )}
+      <path d={ptStr(ROUTE_NORMAL)} fill="none" stroke="#22c55e" strokeWidth="1.2" strokeDasharray="7 6" opacity={deviated?0.18:0.45}/>
+      {!deviated&&<path d={ptStr(ROUTE_NORMAL.slice(0,3))} fill="none" stroke="#22c55e" strokeWidth="2.2" opacity="0.85"/>}
+      {deviated&&<path d={ptStr(ROUTE_DEV)} fill="none" stroke="#ef4444" strokeWidth="2.2" strokeDasharray="6 4" opacity="0.9"/>}
+      <line x1={POS.paradip.x} y1={POS.paradip.y} x2={POS.bhilai.x} y2={POS.bhilai.y} stroke={railColor} strokeWidth={railW} strokeDasharray="3 4" opacity={alerted?0.75:0.4}/>
+      {alerted&&<text x={(POS.paradip.x+POS.bhilai.x)/2+10} y={(POS.paradip.y+POS.bhilai.y)/2} fill="#ef4444" fontSize="8" fontFamily="monospace" opacity="0.65">RAIL LINK</text>}
+      <MapNode x={POS.haypoint.x} y={POS.haypoint.y} color="#64748b" r={5} label="Hay Point, QLD" dir="right"/>
+      {deviated&&<g><MapNode x={POS.singapore.x} y={POS.singapore.y} color="#f59e0b" r={6} label="Singapore" dir="top" pulse={true}/><text x={POS.singapore.x} y={POS.singapore.y+20} fill="#f59e0b" fontSize="8.5" fontFamily="monospace" textAnchor="middle" opacity="0.85">anchorage detected</text></g>}
+      <MapNode x={POS.paradip.x}    y={POS.paradip.y}    color={congColor(paradipV,6)} r={7} label="Paradip"    dir="right" pulse={deviated}/>
+      <MapNode x={POS.vizag.x}      y={POS.vizag.y}      color={congColor(9,6)}        r={5} label="Vizag"      dir="left"/>
+      <MapNode x={POS.gangavaram.x} y={POS.gangavaram.y} color={congColor(11,6)}       r={5} label="Gangavaram" dir="left"/>
+      <MapNode x={POS.haldia.x}     y={POS.haldia.y}     color={congColor(7,6)}        r={5} label="Haldia"     dir="right"/>
+      <MapNode x={POS.bhilai.x}   y={POS.bhilai.y}   color={invColor(bhilaiInv,5)}  r={8} label="BSP Bhilai"   dir="left" pulse={alerted}/>
+      <MapNode x={POS.rourkela.x} y={POS.rourkela.y} color={invColor(18,5)}         r={5} label="RSP Rourkela" dir="right"/>
+      <MapNode x={POS.bokaro.x}   y={POS.bokaro.y}   color={invColor(22,5)}         r={5} label="BSL Bokaro"   dir="right"/>
+      <MapNode x={POS.durgapur.x} y={POS.durgapur.y} color={invColor(26,5)}         r={5} label="DSP Durgapur" dir="right"/>
+      <polygon points={vp.x+","+(vp.y-9)+" "+(vp.x+7)+","+(vp.y+6)+" "+(vp.x-7)+","+(vp.y+6)} fill={vc} opacity="0.95"/>
+      <text x={vp.x} y={vp.y+20} fill={vc} fontSize="8.5" fontFamily="monospace" textAnchor="middle" fontWeight="500">MV GLORY SOVEREIGN</text>
+      <text x={vp.x} y={vp.y+31} fill={deviated?"#f59e0b":"#64748b"} fontSize="8" fontFamily="monospace" textAnchor="middle">{!deviated?"Day 5 · on route":"route deviation"}</text>
+      <rect x="12" y="12" width="138" height="58" rx="5" fill="#0a1628" stroke="#1e293b" strokeWidth="1"/>
+      <text x="22" y="30" fill="#475569" fontSize="8" fontFamily="monospace" letterSpacing="1">ETA PARADIP</text>
+      <text x="22" y="50" fill={deviated?"#ef4444":"#22c55e"} fontSize="22" fontFamily="monospace" fontWeight="600">DAY {etaDay}</text>
+      <text x="22" y="63" fill={deviated?"#f59e0b":"#475569"} fontSize="8.5" fontFamily="monospace">{deviated?("+"+etaDelay+"d delay"):"on schedule"}</text>
+      <rect x="438" y="12" width="148" height="30" rx="5" fill="#0a1628" stroke="#1e293b" strokeWidth="1"/>
+      <circle cx="454" cy="27" r="5" fill={statusColor}>{deviated&&<animate attributeName="opacity" values="1;0.3;1" dur="1.2s" repeatCount="indefinite"/>}</circle>
+      <text x="464" y="27" fill={statusColor} fontSize="10" fontFamily="monospace" dominantBaseline="middle" letterSpacing="1.5">{statusLabel}</text>
+      <rect x="12" y="346" width="188" height="42" rx="4" fill="#0a1628" stroke="#1e293b" strokeWidth="0.8" opacity="0.9"/>
+      {[{c:"#22c55e",l:"Normal (on route / good stock)"},{c:"#f59e0b",l:"Watch (deviation / elevated)"},{c:"#ef4444",l:"Alert (feed risk / congestion)"}].map(function(item,i){
+        return (<g key={i} transform={"translate(20,"+(355+i*11)+")"}><circle cx="0" cy="0" r="3.5" fill={item.c}/><text x="9" y="0" fill="#64748b" fontSize="8" fontFamily="monospace" dominantBaseline="middle">{item.l}</text></g>);
+      })}
+    </svg>
+  );
+}
+
+/* ─── InvBar ─── */
+function InvBar({plant,step,executed}){
+  /* Bhilai: baseline 14d → disrupted 4d (14 - 6d vessel - 4d congestion = 4d)
+     Resolved (priority rake): 4d + 2.5d rail saving = 6.5d → above 5d minimum
+     Other plants unaffected by this vessel/port event               */
+  var bhilaiResolved = executed && plant.id==="bhilai";
+  var eff=step<2?plant.inventory:bhilaiResolved?6.5:(plant.id==="bhilai"?4:plant.inventory);
+  var v=useAnimNum(Math.round(eff));
+  var pct=Math.min((eff/30)*100,100);
+  var color=invColor(bhilaiResolved?6.5:v, plant.threshold);
+  var risk=plant.id==="bhilai"&&step>=2&&!executed;
+  return (
+    <div style={{marginBottom:13}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+        <div style={{display:"flex",alignItems:"center",gap:7}}>
+          <span style={{fontFamily:"monospace",fontSize:9,color:"#64748b",letterSpacing:1}}>{plant.short}</span>
+          <span style={{fontSize:9,color:"#475569"}}>{plant.name}</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          {risk&&<span className="pulse-anim" style={{fontSize:7.5,fontWeight:700,letterSpacing:1.5,color:"#ef4444",border:"1px solid #ef4444",padding:"1px 5px",borderRadius:2}}>FEED RISK</span>}
+          {bhilaiResolved&&<span className="fadein-anim" style={{fontSize:7.5,fontWeight:700,letterSpacing:1.5,color:"#22c55e",border:"1px solid #22c55e",padding:"1px 5px",borderRadius:2}}>RESOLVED</span>}
+          <span style={{fontFamily:"monospace",fontSize:13,color,fontWeight:600}}>{v}d</span>
+        </div>
+      </div>
+      <div style={{height:5,background:"#1e293b",borderRadius:3,overflow:"hidden",position:"relative"}}>
+        <div style={{height:"100%",width:pct+"%",background:color,borderRadius:3,transition:"width 0.8s ease,background 0.5s ease"}}/>
+        <div style={{position:"absolute",top:0,left:((plant.threshold/30)*100)+"%",width:1,height:"100%",background:"#ef444488"}}/>
+      </div>
+      <div style={{textAlign:"right",marginTop:2}}><span style={{fontSize:7.5,color:"#334155"}}>threshold {plant.threshold}d</span></div>
+    </div>
+  );
+}
+
+/* ─── Step progress bar ─── */
+function StepBar({step}){
+  var steps=["SIGNAL","IMPACT","ACTION","RESOLVED"];
+  var colors=["#3b82f6","#ef4444","#3b82f6","#22c55e"];
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:2}}>
+      {steps.map(function(l,i){
+        var active=step-1===i; var done=step-1>i;
+        var c=done||active?colors[i]:"#1e293b";
+        return (
+          <div key={i} style={{display:"flex",alignItems:"center"}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+              <div style={{width:18,height:18,borderRadius:"50%",background:active?c+"22":"transparent",border:"1.5px solid "+c,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.4s"}}>
+                {done&&<span style={{fontSize:9,color:c}}>✓</span>}
+                {active&&<div style={{width:7,height:7,borderRadius:"50%",background:c,animation:"pulse 1s infinite"}}/>}
+              </div>
+              <span style={{fontSize:7,fontFamily:"monospace",color:done||active?c:"#1e293b",transition:"color 0.4s"}}>{l}</span>
+            </div>
+            {i<steps.length-1&&<div style={{width:18,height:1,background:done?c:"#1e293b",marginBottom:14,transition:"background 0.5s"}}/>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── MAIN ─── */
+function SAILDemo(){
+  var ss=useState(0); var step=ss[0]; var setStep=ss[1];
+  var cs=useState(new Date()); var clock=cs[0]; var setClock=cs[1];
+  var as=useState(null); var selId=as[0]; var setSelId=as[1];
+  var es=useState(false); var executed=es[0]; var setExecuted=es[1];
+  var ls=useState([0,1]); var visLogs=ls[0]; var setVisLogs=ls[1];
+  var ns=useState(null); var newIdx=ns[0]; var setNewIdx=ns[1];
+
+  useEffect(function(){var t=setInterval(function(){setClock(new Date());},1000);return function(){clearInterval(t);};},[]);
+
+  /* cascade logs when step changes */
+  useEffect(function(){
+    if(step===1){
+      setVisLogs([0,1]);
+      var t1=setTimeout(function(){setVisLogs([0,1,2]);setNewIdx(2);},500);
+      var t2=setTimeout(function(){setVisLogs([0,1,2,3]);setNewIdx(3);},1300);
+      var t3=setTimeout(function(){setNewIdx(null);},2100);
+      return function(){clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
+    }
+    if(step===2){
+      setVisLogs([0,1,2,3]);
+      var t4=setTimeout(function(){setVisLogs([0,1,2,3,4]);setNewIdx(4);},400);
+      var t5=setTimeout(function(){setVisLogs([0,1,2,3,4,5]);setNewIdx(5);},1100);
+      var t6=setTimeout(function(){setNewIdx(null);},1900);
+      return function(){clearTimeout(t4);clearTimeout(t5);clearTimeout(t6);};
+    }
+  },[step]);
+
+  function advance(){if(step<3)setStep(function(s){return s+1;});}
+  function reset(){setStep(0);setSelId(null);setExecuted(false);setVisLogs([0,1]);setNewIdx(null);}
+  function execute(){if(!selId)return;setExecuted(true);setStep(4);}
+
+  var sc=step===0?"#22c55e":step<=2?"#f59e0b":"#ef4444";
+  var sl=step===0?"NOMINAL":step<=2?"WATCH":"ALERT";
+  var paradipV=step>=1?16:14;
+  var logHL=step===1;
+  var impactHL=step===2;
+  var actionHL=step===3&&!executed;
+  var selAction=selId?ACTIONS.find(function(a){return a.id===selId;}):null;
+
+  var LOGO="data:image/jpeg;base64,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";
+
+  return (
+    <div style={{height:"100vh",background:"#070d1a",color:"#e2e8f0",fontFamily:"'Segoe UI',sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+
+      {/* TOPBAR */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 20px",borderBottom:"1px solid #1e293b",background:"#0a1628",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <img src={LOGO} style={{height:44,width:"auto",borderRadius:4}} alt="secondbrains"/>
+          <div style={{borderLeft:"1px solid #1e293b",paddingLeft:14}}>
+            <div style={{fontSize:11,fontWeight:600,letterSpacing:0.5}}>SAIL PORT &amp; VESSEL INTELLIGENCE</div>
+            <div style={{fontSize:9,color:"#475569",marginTop:1}}>Coking Coal Supply Chain · Real-time Risk Monitoring</div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:20}}>
+          {step>0&&<div className="fadein-anim"><StepBar step={step}/></div>}
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div className={step>0?"pulse-anim":""} style={{width:7,height:7,borderRadius:"50%",background:sc,transition:"background 0.5s"}}/>
+            <span style={{fontFamily:"monospace",fontSize:10,color:sc,letterSpacing:1.5,transition:"color 0.5s"}}>SYSTEM {sl}</span>
+          </div>
+          <span style={{fontFamily:"monospace",fontSize:9,color:"#334155"}}>
+            {clock.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"})} IST
+          </span>
+        </div>
+      </div>
+
+      {/* BODY */}
+      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+
+        {/* LEFT */}
+        <div style={{width:242,background:"#0a1628",borderRight:"1px solid #1e293b",padding:14,display:"flex",flexDirection:"column",gap:14,overflow:"auto",flexShrink:0}}>
+          <div style={{background:"#0f1f3a",borderRadius:8,padding:12,border:"1px solid "+(step>=1?"#ef444430":"#1e293b"),transition:"border-color 0.6s"}}>
+            <div style={{fontSize:8,color:"#475569",letterSpacing:1.5,marginBottom:8,fontFamily:"monospace"}}>TRACKED VESSEL</div>
+            <div style={{fontSize:11,fontWeight:600,marginBottom:2}}>MV GLORY SOVEREIGN</div>
+            <div style={{fontSize:8.5,color:"#475569",fontFamily:"monospace",marginBottom:10}}>IMO 9741823 · Capesize Bulk Carrier</div>
+            {[["CARGO","165,000T Australian HCC"],["ORIGIN","Hay Point, QLD"],["DEST.","Paradip Port"],["CONTRACT","Bhilai Steel Plant"]].map(function(kv){
+              return (<div key={kv[0]} style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:8,color:"#334155",fontFamily:"monospace"}}>{kv[0]}</span><span style={{fontSize:9,color:"#94a3b8"}}>{kv[1]}</span></div>);
+            })}
+            <div style={{borderTop:"1px solid #1e293b",marginTop:8,paddingTop:8,display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+              <div>
+                <div style={{fontSize:8,color:"#475569",fontFamily:"monospace"}}>ETA</div>
+                <div style={{fontSize:22,fontFamily:"monospace",fontWeight:600,color:step>=1?"#ef4444":"#22c55e",transition:"color 0.5s",marginTop:2}}>DAY {step>=1?18:12}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:8,color:"#475569",fontFamily:"monospace"}}>DELAY</div>
+                <div style={{fontSize:22,fontFamily:"monospace",fontWeight:600,color:step>=1?"#f59e0b":"#334155",transition:"color 0.5s",marginTop:2}}>+{step>=1?6:0}d</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{background:"#0f1f3a",border:"1px solid #1e293b",borderRadius:8,padding:12}}>
+            <div style={{fontSize:8,color:"#475569",letterSpacing:1.5,marginBottom:10,fontFamily:"monospace"}}>COKING COAL INVENTORY</div>
+            {PLANTS.map(function(p){return <InvBar key={p.id} plant={p} step={step} executed={executed}/>;} )}
+          </div>
+
+          <div style={{background:"#0f1f3a",border:"1px solid #1e293b",borderRadius:8,padding:12}}>
+            <div style={{fontSize:8,color:"#475569",letterSpacing:1.5,marginBottom:10,fontFamily:"monospace"}}>PORT CONGESTION</div>
+            {PORTS.map(function(port){
+              var v=port.id==="paradip"?paradipV:port.vessels;
+              var color=congColor(v,port.baseline);
+              var barW=Math.min((v/port.baseline/3)*100,100)+"%";
+              return (
+                <div key={port.id} style={{marginBottom:9}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                    <span style={{fontSize:9,color:"#94a3b8"}}>{port.name}</span>
+                    <span style={{fontFamily:"monospace",fontSize:9,color}}>{v}<span style={{color:"#334155"}}>/{port.baseline}</span></span>
+                  </div>
+                  <div style={{height:4,background:"#1e293b",borderRadius:2}}>
+                    <div style={{height:"100%",width:barW,background:color,borderRadius:2,transition:"width 0.8s,background 0.5s"}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* MAP */}
+        <div style={{flex:1,overflow:"hidden",display:"flex"}}><SailMap step={step}/></div>
+
+        {/* RIGHT */}
+        <div style={{width:282,background:"#0a1628",borderLeft:"1px solid #1e293b",padding:14,display:"flex",flexDirection:"column",gap:10,overflow:"auto",flexShrink:0}}>
+
+          {/* ── SIGNAL LOG ── */}
+          <div style={{
+            background:"#0f1f3a",borderRadius:8,padding:12,
+            border:"1.5px solid "+(logHL?"rgba(59,130,246,0.75)":"#1e293b"),
+            transition:"border-color 0.3s,box-shadow 0.3s",
+            boxShadow:logHL?"0 0 20px rgba(59,130,246,0.1)":"none",
+            animation:logHL?"borderBlue 1.4s ease-in-out infinite":"none",
+          }}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+              <div style={{fontSize:8,color:logHL?"#60a5fa":"#475569",letterSpacing:1.5,fontFamily:"monospace",transition:"color 0.3s"}}>
+                SIGNAL LOG
+              </div>
+              {logHL&&<div className="fadein-anim" style={{fontSize:7,fontFamily:"monospace",color:"#3b82f6",background:"#0d2040",padding:"2px 6px",borderRadius:3,letterSpacing:1,animation:"pulse 1s infinite"}}>● LIVE</div>}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:7}}>
+              {ALL_LOGS.map(function(l,i){
+                if(visLogs.indexOf(i)<0)return null;
+                var isNew=i===newIdx;
+                return (
+                  <div key={i} className={isNew?"log-new":"slidein-anim"} style={{display:"flex",gap:8,padding:isNew?"3px 5px":"2px 0",borderRadius:4}}>
+                    <span style={{fontFamily:"monospace",fontSize:8,color:"#334155",flexShrink:0,paddingTop:1}}>{l.t}</span>
+                    <span style={{fontSize:9,color:l.c,lineHeight:1.5}}>{l.m}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* context / scenario text */}
+          {step===0&&(
+            <div style={{background:"#0f1f3a",border:"1px solid #1e293b",borderRadius:8,padding:12}}>
+              <div style={{fontSize:8,color:"#475569",letterSpacing:1.5,marginBottom:8,fontFamily:"monospace"}}>SCENARIO</div>
+              <div style={{fontSize:10,color:"#64748b",lineHeight:1.75}}>Replaying <span style={{color:"#e2e8f0"}}>September 2022</span>. MV Glory Sovereign — 165,000T contracted coking coal from Hay Point to Bhilai via Paradip.</div>
+              <div style={{marginTop:8,fontSize:10,color:"#64748b",lineHeight:1.75}}>Bhilai projected buffer on arrival: <span style={{color:"#22c55e",fontFamily:"monospace"}}>14 days</span>. All nominal.</div>
+            </div>
+          )}
+          {step===1&&(
+            <div className="fadein-anim" style={{background:"#0f1f3a",border:"1px solid #1e293b",borderRadius:8,padding:12}}>
+              <div style={{fontSize:8,color:"#f59e0b",letterSpacing:1.5,marginBottom:8,fontFamily:"monospace"}}>VISIBILITY GAP — 2022</div>
+              <div style={{fontSize:10,color:"#64748b",lineHeight:1.75}}>SAIL's team was notified only when the vessel berthed at Vizag. Deviation was <span style={{color:"#f59e0b"}}>invisible for 6+ days</span>.</div>
+              <div style={{marginTop:8,fontSize:10,color:"#64748b",lineHeight:1.75}}>This platform detected it in <span style={{color:"#f59e0b",fontFamily:"monospace"}}>real time</span>. Bhilai has a <span style={{color:"#f59e0b",fontFamily:"monospace"}}>narrow window</span> to act before buffer hits minimum.</div>
+            </div>
+          )}
+
+          {/* ── IMPACT ── */}
+          {step>=2&&(
+            <div style={{
+              background:"#160606",borderRadius:8,padding:12,
+              border:"1.5px solid "+(impactHL?"rgba(239,68,68,0.75)":"#ef444325"),
+              transition:"border-color 0.3s,box-shadow 0.3s",
+              boxShadow:impactHL?"0 0 22px rgba(239,68,68,0.12)":"none",
+              animation:impactHL?"borderRed 1.4s ease-in-out infinite":"none",
+            }}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                <div style={{fontSize:8,color:"#ef4444",letterSpacing:1.5,fontFamily:"monospace"}}>IMPACT — BHILAI STEEL PLANT</div>
+                {impactHL&&<div style={{fontSize:7,color:"#ef4444",fontFamily:"monospace",animation:"pulse 1s infinite"}}>● COMPUTING</div>}
+              </div>
+              {[
+                ["Baseline buffer on arrival","14 days"],
+                ["Vessel delay","+6 days"],
+                ["Port congestion delay","+4 days"],
+                ["Projected buffer on arrival","4 days"],
+                ["Minimum required buffer","5 days"],
+                ["Shortfall","−1 day"],
+                ["Hot metal at risk","~38,000 thm"],
+                ["Production exposure","Rs 18–22 Cr"],
+              ].map(function(kv,i){
+                return (
+                  <div key={i} className="fadein-anim" style={{display:"flex",justifyContent:"space-between",marginBottom:6,animationDelay:(i*0.07)+"s"}}>
+                    <span style={{fontSize:9,color:"#94a3b8"}}>{kv[0]}</span>
+                    <span style={{fontFamily:"monospace",fontSize:9,color:"#ef4444",fontWeight:500}}>{kv[1]}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── ACTIONS ── */}
+          {step>=3&&!executed&&(
+            <div style={{
+              background:"#0f1f3a",borderRadius:8,padding:12,
+              border:"1.5px solid "+(actionHL?"rgba(59,130,246,0.75)":"#1e293b"),
+              boxShadow:actionHL?"0 0 22px rgba(59,130,246,0.1)":"none",
+              animation:actionHL?"borderBlue 1.4s ease-in-out infinite":"none",
+            }}>
+              <div style={{fontSize:8,color:actionHL?"#60a5fa":"#475569",letterSpacing:1.5,marginBottom:4,fontFamily:"monospace"}}>RECOMMENDED ACTIONS</div>
+              <div style={{fontSize:9,color:"#334155",marginBottom:9}}>Select an action to execute</div>
+              {ACTIONS.map(function(a,i){
+                var isSel=selId===a.id;
+                var isDim=selId&&selId!==a.id;
+                return (
+                  <div
+                    key={a.id}
+                    className={"action-card"+(isSel?" action-sel":"")+(isDim?" action-dim":"")}
+                    onClick={function(){if(!isDim)setSelId(isSel?null:a.id);}}
+                    style={{
+                      marginBottom:8,padding:"9px 11px",background:isSel?a.color+"15":"#0a1628",
+                      borderRadius:6,borderLeft:"2.5px solid "+a.color,
+                      border:isSel?"1.5px solid "+a.color+"55":"1px solid #1e293b",
+                      borderLeft:"2.5px solid "+a.color,
+                      animation:"actionSlide 0.3s ease both",animationDelay:(i*0.09)+"s",
+                    }}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:12}}>{a.icon}</span>
+                        <span style={{fontSize:10,fontWeight:600,color:isSel?a.color:"#e2e8f0"}}>{a.label}</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:5}}>
+                        <span style={{fontSize:7,fontFamily:"monospace",color:a.color,background:a.color+"15",padding:"1px 5px",borderRadius:3}}>{a.badge}</span>
+                        {isSel&&<span className="check-anim" style={{width:15,height:15,borderRadius:"50%",background:a.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#000",fontWeight:700}}>✓</span>}
+                      </div>
+                    </div>
+                    <div style={{fontSize:8.5,color:"#475569",lineHeight:1.45,marginBottom:4}}>{a.detail}</div>
+                    <div style={{display:"flex",justifyContent:"space-between"}}>
+                      <span style={{fontSize:8,fontFamily:"monospace",color:a.color}}>{a.cost}</span>
+                      <span style={{fontSize:7.5,color:"#334155",fontFamily:"monospace"}}>{a.riskLabel}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {selId&&(
+                <button onClick={execute} className="shimmer-btn" style={{width:"100%",padding:"10px",border:"none",borderRadius:6,cursor:"pointer",color:"#fff",fontSize:10,fontWeight:700,letterSpacing:0.8,marginTop:2}}>
+                  ▶  EXECUTE ACTION
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── OUTCOME ── */}
+          {executed&&selAction&&(
+            <div className="fadein-anim" style={{background:"#070f09",border:"1.5px solid "+selAction.color+"45",borderRadius:8,padding:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10}}>
+                <span style={{fontSize:15}}>{selAction.icon}</span>
+                <div style={{fontSize:8,color:selAction.color,letterSpacing:1.5,fontFamily:"monospace"}}>ACTION EXECUTED</div>
+              </div>
+              <div style={{fontSize:9.5,fontWeight:600,color:"#e2e8f0",marginBottom:6}}>{selAction.label}</div>
+              <div style={{background:"#0a1628",borderRadius:6,padding:"10px 12px",border:"1px solid "+selAction.color+"25",marginBottom:10}}>
+                <div style={{fontSize:8,color:"#475569",fontFamily:"monospace",marginBottom:5,letterSpacing:1}}>OUTCOME</div>
+                <div style={{fontSize:9.5,color:selAction.outcomeColor,lineHeight:1.65}}>{selAction.outcome}</div>
+              </div>
+              {selAction.metrics.map(function(kv,i){
+                return (
+                  <div key={i} className="fadein-anim" style={{display:"flex",justifyContent:"space-between",marginBottom:5,animationDelay:(i*0.08)+"s"}}>
+                    <span style={{fontSize:9,color:"#64748b"}}>{kv[0]}</span>
+                    <span style={{fontFamily:"monospace",fontSize:9,color:selAction.outcomeColor,fontWeight:500}}>{kv[1]}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* CONTROLS */}
+          <div style={{marginTop:"auto",display:"flex",flexDirection:"column",gap:8}}>
+            {step<3&&(
+              <button onClick={advance} style={{width:"100%",padding:"9px 12px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:6,cursor:"pointer",color:"#fff",fontSize:10,fontWeight:600,letterSpacing:0.5}}>
+                {step===0?"▶  SIMULATE DEVIATION":step===1?"▶  CALCULATE IMPACT":"▶  SHOW RECOMMENDATIONS"}
+              </button>
+            )}
+            <button onClick={reset} style={{width:"100%",padding:"8px 12px",background:"transparent",border:"1px solid #1e293b",borderRadius:6,cursor:"pointer",color:"#475569",fontSize:10}}>
+              ↺  RESET SIMULATION
+            </button>
+          </div>
+
+          <div style={{fontSize:8,color:"#1e293b",textAlign:"center",fontFamily:"monospace"}}>secondbrains.ai · Confidential · Demo Build</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(SAILDemo));
+</script>
+</body>
+</html>
