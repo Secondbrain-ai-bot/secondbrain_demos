@@ -295,6 +295,45 @@
   .locked-summary-bar { background: #0ea5e918; border: 1px solid #0ea5e944; border-radius: 5px; padding: 8px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 12px; }
   .routing-step-assign { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 
+  /* RECOMMENDATION PANEL */
+  .rec-panel { margin-top:14px; }
+  .rec-generate-btn { width:100%; padding:10px; background:linear-gradient(135deg,#7c3aed,#1f6feb); color:#fff; border:none; border-radius:6px; font-size:12px; font-family:var(--sans); font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity 0.15s; letter-spacing:0.3px; }
+  .rec-generate-btn:hover { opacity:0.88; }
+  .rec-generate-btn:disabled { opacity:0.45; cursor:not-allowed; }
+  .rec-thinking { display:flex; align-items:center; gap:10px; padding:12px; background:var(--accent-purple-dim); border:1px solid var(--accent-purple)44; border-radius:6px; font-family:var(--mono); font-size:11px; color:var(--accent-purple); animation:fadeIn 0.3s; }
+  .rec-thinking-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-purple); animation:pulse 0.8s infinite; }
+  .rec-card { background:var(--bg-elevated); border:1px solid var(--border-accent); border-radius:8px; margin-bottom:10px; overflow:hidden; transition:border-color 0.2s; animation:slideIn 0.25s ease; }
+  .rec-card:hover { border-color:var(--accent-purple)55; }
+  .rec-card.selected { border-color:var(--accent-purple); background:var(--accent-purple-dim); }
+  .rec-card.applied { border-color:var(--accent-green); background:var(--accent-green-dim); }
+  .rec-card.rejected { opacity:0.4; border-style:dashed; }
+  .rec-card-header { padding:10px 12px; display:flex; align-items:flex-start; gap:10px; cursor:pointer; }
+  .rec-rank { width:22px; height:22px; border-radius:50%; background:var(--accent-purple); color:#fff; font-family:var(--mono); font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .rec-rank.top { background:linear-gradient(135deg,#d29922,#f59e0b); }
+  .rec-type-badge { font-family:var(--mono); font-size:9px; padding:2px 7px; border-radius:3px; background:var(--accent-purple-dim); border:1px solid var(--accent-purple)44; color:var(--accent-purple); white-space:nowrap; }
+  .rec-title { font-size:12px; font-weight:600; color:var(--text-primary); margin-bottom:3px; }
+  .rec-desc { font-size:11px; color:var(--text-secondary); line-height:1.45; }
+  .rec-impact { padding:8px 12px; background:var(--bg-surface); border-top:1px solid var(--border); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .rec-impact-item { display:flex; flex-direction:column; gap:1px; }
+  .rec-impact-label { font-family:var(--mono); font-size:9px; color:var(--text-muted); letter-spacing:0.5px; text-transform:uppercase; }
+  .rec-impact-val { font-family:var(--mono); font-size:12px; font-weight:600; }
+  .rec-impact-val.green { color:var(--accent-green); }
+  .rec-impact-val.amber { color:var(--accent-amber); }
+  .rec-impact-val.red { color:var(--accent-red); }
+  .rec-actions { padding:8px 12px; border-top:1px solid var(--border); display:flex; gap:8px; }
+  .rec-apply-btn { flex:1; padding:6px; background:var(--accent-green); color:#fff; border:none; border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; font-family:var(--sans); transition:opacity 0.15s; }
+  .rec-apply-btn:hover { opacity:0.85; }
+  .rec-reject-btn { padding:6px 12px; background:var(--bg-surface); color:var(--text-muted); border:1px solid var(--border-accent); border-radius:5px; font-size:11px; cursor:pointer; font-family:var(--sans); transition:all 0.15s; }
+  .rec-reject-btn:hover { color:var(--accent-red); border-color:var(--accent-red)44; }
+  .rec-applied-tag { font-family:var(--mono); font-size:10px; color:var(--accent-green); display:flex; align-items:center; gap:4px; }
+  .rec-etd-improvement { display:inline-flex; align-items:center; gap:5px; background:var(--accent-green-dim); border:1px solid var(--accent-green)33; border-radius:4px; padding:3px 8px; font-family:var(--mono); font-size:11px; color:var(--accent-green); }
+  .delay-analysis-box { background:var(--bg-elevated); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:12px; }
+  .delay-root-cause { display:flex; gap:8px; align-items:flex-start; padding:6px 0; border-bottom:1px solid var(--border)55; }
+  .delay-root-cause:last-child { border-bottom:none; }
+  .delay-cause-icon { width:20px; text-align:center; flex-shrink:0; font-size:13px; }
+  .delay-cause-text { flex:1; font-size:11px; color:var(--text-secondary); line-height:1.4; }
+  .delay-cause-days { font-family:var(--mono); font-size:11px; color:var(--accent-red); font-weight:600; white-space:nowrap; }
+
   /* SHIFT VISUALIZATION */
   .gantt-row-tall { min-height: 52px; }
   .shift-block { position: absolute; height: 14px; top: 10px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 8px; color: rgba(255,255,255,0.9); overflow: hidden; transition: all 0.3s ease; }
@@ -1103,6 +1142,50 @@ const chatbotService = {
           return `• ${o.poNum} (${o.customer?.name}) — ${ws?.stage}: ${ws?.gapReasons?.[0]} | ETD: ${o.eta}`;
         }).join('\n'),
         screen: 'planning'
+      };
+    }
+
+    if (q.includes('recommend') || q.includes('suggestion') || q.includes('improve') || q.includes('fix delay') || q.includes('what can')) {
+      const delayedOrders = orders.filter(o => o.isDelayed || o.isAtRisk);
+      if (delayedOrders.length === 0) {
+        return { text: 'No delayed or at-risk orders currently. All orders are on track — no recommendations needed.', data: null };
+      }
+      const topOrder = delayedOrders.sort((a,b) => (b.delayDays||0)-(a.delayDays||0))[0];
+      const recs = recommendationService.generate(topOrder, {});
+      const topRec = recs[0];
+      return {
+        text: `${delayedOrders.length} order${delayedOrders.length>1?'s':''} need attention. Top recommendation for ${topOrder.poNum}:`,
+        data: topRec
+          ? `⭐ ${topRec.title}
+${topRec.description}
+ETD improvement: ${topRec.originalETD} → ${topRec.newETD} (-${topRec.delayReductionDays}d)
+Disruption: ${topRec.disruption}`
+          : 'Open the order detail to generate tailored recommendations.',
+        screen: 'orders',
+      };
+    }
+
+    if (q.includes('why') && (q.includes('delay') || q.includes('late'))) {
+      const poMatch = query.match(/PO-\d+/i);
+      const order = poMatch ? orders.find(o => o.poNum.toLowerCase() === poMatch[0].toLowerCase()) : orders.filter(o=>o.isDelayed)[0];
+      if (!order) return { text: 'Order not found or no delayed orders.', data: null };
+      const analysis = delayAnalysisService.analyze(order);
+      if (!analysis) return { text: `${order.poNum} is not delayed.`, data: null };
+      return {
+        text: `Root cause analysis for ${order.poNum} (+${order.delayDays}d):`,
+        data: analysis.rootCauses.map(c => `${c.icon} ${c.stage ? c.stage+': ' : ''}${c.description} (+${c.delayContribution}d)`).join('\n'),
+        screen: 'orders',
+      };
+    }
+
+    if (q.includes('overtime')) {
+      const delayed = orders.filter(o => o.isDelayed);
+      if (delayed.length === 0) return { text: 'No delayed orders — overtime not required.', data: null };
+      const recs = delayed.flatMap(o => recommendationService.generate(o, {}).filter(r => r.actionType === 'overtime'));
+      return {
+        text: `${recs.length} overtime recommendation${recs.length!==1?'s':''} available:`,
+        data: recs.slice(0,4).map(r => `• ${r.id.split('_')[2]} — ${r.title} | -${r.delayReductionDays}d`).join('\n') || 'None applicable.',
+        screen: 'orders',
       };
     }
 
@@ -2002,7 +2085,7 @@ function OrderOverrideModal({ order, existingOverride, onSave, onCancel }) {
           <div className="form-row">
             <label className="form-label">
               Priority
-              {priority !== orig.priority && <span className="form-label-orig">&nbsp;(was: {orig.priority})</span>}
+              {priority !== orig.priority && <span className="form-label-orig"> (was: {orig.priority})</span>}
             </label>
             <select
               className={`form-select ${priority !== orig.priority ? 'form-changed' : ''}`}
@@ -2016,7 +2099,7 @@ function OrderOverrideModal({ order, existingOverride, onSave, onCancel }) {
           <div className="form-row">
             <label className="form-label">
               Due Date
-              {dueDate !== orig.dueDate && <span className="form-label-orig">&nbsp;(was: {orig.dueDate})</span>}
+              {dueDate !== orig.dueDate && <span className="form-label-orig"> (was: {orig.dueDate})</span>}
             </label>
             <input
               type="date"
@@ -2029,7 +2112,7 @@ function OrderOverrideModal({ order, existingOverride, onSave, onCancel }) {
           <div className="form-row">
             <label className="form-label">
               Complexity
-              {complexity !== orig.complexity && <span className="form-label-orig">&nbsp;(was: {orig.complexity})</span>}
+              {complexity !== orig.complexity && <span className="form-label-orig"> (was: {orig.complexity})</span>}
             </label>
             <select
               className={`form-select ${complexity !== orig.complexity ? 'form-changed' : ''}`}
@@ -2071,6 +2154,296 @@ function OrderOverrideModal({ order, existingOverride, onSave, onCancel }) {
     </div>
   );
 }
+
+// ============================================================
+// DELAY ANALYSIS & RECOMMENDATION ENGINE
+// ============================================================
+
+const delayAnalysisService = {
+  analyze(order) {
+    if (!order || (!order.isDelayed && !order.isAtRisk)) return null;
+
+    const rootCauses = [];
+    const bottleneckStage = (order.stages || [])
+      .filter(s => s.hasShiftGap || s.shiftDelayDays > 0)
+      .sort((a, b) => (b.shiftDelayDays || 0) - (a.shiftDelayDays || 0))[0];
+
+    if (bottleneckStage) {
+      const gapReasons = bottleneckStage.gapReasons || [];
+      gapReasons.forEach(r => {
+        rootCauses.push({
+          type: 'shift_gap',
+          icon: '🕐',
+          stage: bottleneckStage.stage,
+          description: r,
+          delayContribution: bottleneckStage.shiftDelayDays || 1,
+        });
+      });
+    }
+
+    // Equipment bottleneck
+    const heavyStage = (order.stages || [])
+      .filter(s => s.calendarDays > 4)
+      .sort((a, b) => b.calendarDays - a.calendarDays)[0];
+    if (heavyStage && heavyStage !== bottleneckStage) {
+      rootCauses.push({
+        type: 'equipment_load',
+        icon: '⚙',
+        stage: heavyStage.stage,
+        description: `${heavyStage.equipment || 'Equipment'} heavily loaded — ${heavyStage.calendarDays} calendar days for ${heavyStage.durationHours}h operation`,
+        delayContribution: Math.max(0, heavyStage.calendarDays - Math.ceil(heavyStage.durationHours / 16)),
+      });
+    }
+
+    // Priority displacement
+    if (order.priority === 'Low' || order.priority === 'Medium') {
+      rootCauses.push({
+        type: 'priority',
+        icon: '📋',
+        stage: null,
+        description: `Order priority is ${order.priority} — higher priority orders scheduled ahead, pushing this order start date`,
+        delayContribution: order.priority === 'Low' ? 2 : 1,
+      });
+    }
+
+    // Queue delay
+    if (order.delayDays > 3) {
+      rootCauses.push({
+        type: 'queue',
+        icon: '⏳',
+        stage: order.currentStage,
+        description: `${order.currentStage || 'Current stage'} queue congestion — multiple orders competing for same resources`,
+        delayContribution: Math.min(order.delayDays, 2),
+      });
+    }
+
+    if (rootCauses.length === 0 && order.isDelayed) {
+      rootCauses.push({
+        type: 'capacity',
+        icon: '📦',
+        stage: null,
+        description: `Overall plant capacity constraint — cumulative schedule drift of ${order.delayDays} days`,
+        delayContribution: order.delayDays,
+      });
+    }
+
+    return {
+      totalDelayDays: order.delayDays || 0,
+      rootCauses,
+      bottleneckStage: bottleneckStage?.stage || order.currentStage,
+      bottleneckEquipment: bottleneckStage?.equipment,
+    };
+  }
+};
+
+const recommendationService = {
+  generate(order, lockedAssignments = {}) {
+    if (!order || (!order.isDelayed && !order.isAtRisk)) return [];
+    const analysis = delayAnalysisService.analyze(order);
+    if (!analysis) return [];
+
+    const recs = [];
+    const delayDays = order.delayDays || 0;
+    const bottleneckStage = (order.stages || [])
+      .filter(s => s.hasShiftGap || s.gapShifts > 0)
+      .sort((a, b) => (b.gapShifts || 0) - (a.gapShifts || 0))[0]
+      || order.stages?.[order.currentStageIdx || 0];
+
+    const isLocked = (stage) => !!lockedAssignments[`${order.poNum}::${stage}`];
+
+    // ── 1. Add Overtime to Qualified Operator ─────────────────────────────
+    if (bottleneckStage) {
+      const stage = bottleneckStage.stage;
+      const skillsNeeded = STAGE_OPERATOR_SKILLS[stage] || [];
+      const eligibleOps = OPERATORS.filter(op =>
+        op.available && skillsNeeded.some(s => op.skills.includes(s)) && op.utilization < 95
+      );
+      if (eligibleOps.length > 0 && !isLocked(stage)) {
+        const op = eligibleOps.sort((a,b) => a.utilization - b.utilization)[0];
+        const overtimeHours = Math.min(4, bottleneckStage.gapShifts * 2);
+        const delayReduction = Math.min(delayDays, Math.max(1, Math.floor(overtimeHours / 8)));
+        recs.push({
+          id: 'rec_overtime_' + stage,
+          type: 'Overtime',
+          typeBadge: 'ADD OVERTIME',
+          rank: 1,
+          title: `Add ${overtimeHours}h overtime — ${op.name}`,
+          description: `${op.name} (Shift ${op.shift}, ${op.utilization}% utilised) can cover ${overtimeHours}h overtime on ${stage}. This fills the shift gap at ${stage} and allows the operation to complete earlier.`,
+          stage,
+          operatorId: op.id,
+          operatorName: op.name,
+          equipment: bottleneckStage.equipment,
+          originalETD: order.eta,
+          newETD: addWorkDays(order.eta || order.dueDate, -delayReduction),
+          delayReductionDays: delayReduction,
+          residualDelayDays: Math.max(0, delayDays - delayReduction),
+          impactLevel: delayReduction >= 2 ? 'High' : 'Medium',
+          disruption: 'Low',
+          feasible: true,
+          affectedResources: [op.name],
+          affectedEquipment: [bottleneckStage.equipment].filter(Boolean),
+          actionType: 'overtime',
+          actionPayload: { stage, operatorId: op.id, overtimeHours },
+        });
+      }
+    }
+
+    // ── 2. Use Alternate Qualified Operator ───────────────────────────────
+    if (bottleneckStage) {
+      const stage = bottleneckStage.stage;
+      const currentOpId = bottleneckStage.operator;
+      const skillsNeeded = STAGE_OPERATOR_SKILLS[stage] || [];
+      const altOps = OPERATORS.filter(op =>
+        op.available &&
+        op.id !== currentOpId &&
+        skillsNeeded.some(s => op.skills.includes(s)) &&
+        op.utilization < 88
+      );
+      if (altOps.length > 0 && !isLocked(stage)) {
+        const altOp = altOps.sort((a, b) => a.utilization - b.utilization)[0];
+        // Check if alt op works the gap shift
+        const gapShiftId = (bottleneckStage.shiftWindows || []).find(w => w.isGap)?.shiftId;
+        const coversGap = gapShiftId ? altOp.shift === gapShiftId : true;
+        const delayReduction = coversGap
+          ? Math.min(delayDays, bottleneckStage.shiftDelayDays || 1)
+          : Math.max(0, Math.floor((bottleneckStage.shiftDelayDays || 1) / 2));
+        recs.push({
+          id: 'rec_altop_' + stage,
+          type: 'Alternate Operator',
+          typeBadge: 'ALT OPERATOR',
+          rank: 2,
+          title: `Reassign ${stage} → ${altOp.name}`,
+          description: `Replace ${currentOpId ? OPERATORS.find(o=>o.id===currentOpId)?.name||currentOpId : 'current operator'} with ${altOp.name} (Shift ${altOp.shift}, ${altOp.utilization}% utilised)${coversGap ? ' — covers the gap shift directly' : ' — partial gap coverage'}.`,
+          stage,
+          operatorId: altOp.id,
+          operatorName: altOp.name,
+          equipment: bottleneckStage.equipment,
+          originalETD: order.eta,
+          newETD: addWorkDays(order.eta || order.dueDate, -delayReduction),
+          delayReductionDays: delayReduction,
+          residualDelayDays: Math.max(0, delayDays - delayReduction),
+          impactLevel: coversGap ? 'High' : 'Medium',
+          disruption: 'Low',
+          feasible: true,
+          affectedResources: [altOp.name],
+          affectedEquipment: [bottleneckStage.equipment].filter(Boolean),
+          actionType: 'reassign_operator',
+          actionPayload: { stage, operatorId: altOp.id },
+        });
+      }
+    }
+
+    // ── 3. Use Alternate Equipment ────────────────────────────────────────
+    if (bottleneckStage && bottleneckStage.equipment) {
+      const stage = bottleneckStage.stage;
+      const currentEq = bottleneckStage.equipment;
+      const altEquipment = (STAGE_EQUIPMENT_MAP[stage] || []).filter(eid => {
+        if (eid === currentEq) return false;
+        const maint = MAINTENANCE_WINDOWS.find(m => m.equipment === eid);
+        if (maint) return false;
+        // Prefer equipment with both shifts
+        return EQUIPMENT_SHIFT_AVAILABILITY[eid]?.A || EQUIPMENT_SHIFT_AVAILABILITY[eid]?.B;
+      });
+      if (altEquipment.length > 0) {
+        const altEq = altEquipment.find(e =>
+          EQUIPMENT_SHIFT_AVAILABILITY[e]?.A && EQUIPMENT_SHIFT_AVAILABILITY[e]?.B
+        ) || altEquipment[0];
+        const altEqData = EQUIPMENT.find(e => e.id === altEq);
+        const bothShifts = EQUIPMENT_SHIFT_AVAILABILITY[altEq]?.A && EQUIPMENT_SHIFT_AVAILABILITY[altEq]?.B;
+        const delayReduction = bothShifts
+          ? Math.min(delayDays, (bottleneckStage.shiftDelayDays || 0) + 1)
+          : Math.min(delayDays, Math.ceil((bottleneckStage.shiftDelayDays || 0) / 2));
+        recs.push({
+          id: 'rec_alteq_' + stage,
+          type: 'Alternate Equipment',
+          typeBadge: 'ALT EQUIPMENT',
+          rank: 3,
+          title: `Move ${stage} to ${altEq}`,
+          description: `Transfer operation from ${currentEq} to ${altEq} (${altEqData?.name || altEq}). ${bothShifts ? 'Available in both shifts — eliminates shift gap.' : 'Partially improves shift coverage.'} Equipment OEE: ${altEqData?.oee || '—'}%.`,
+          stage,
+          equipment: altEq,
+          operatorId: bottleneckStage.operator,
+          originalETD: order.eta,
+          newETD: addWorkDays(order.eta || order.dueDate, -delayReduction),
+          delayReductionDays: delayReduction,
+          residualDelayDays: Math.max(0, delayDays - delayReduction),
+          impactLevel: bothShifts ? 'High' : 'Medium',
+          disruption: 'Medium',
+          feasible: true,
+          affectedResources: [],
+          affectedEquipment: [currentEq, altEq],
+          actionType: 'alt_equipment',
+          actionPayload: { stage, equipment: altEq },
+        });
+      }
+    }
+
+    // ── 4. Increase Priority ──────────────────────────────────────────────
+    if (order.priority !== 'Critical') {
+      const priorities = ['Low','Medium','High','Critical'];
+      const curIdx = priorities.indexOf(order.priority);
+      const newPriority = priorities[Math.min(curIdx + 1, 3)];
+      const delayReduction = newPriority === 'Critical' ? Math.min(delayDays, 2) : 1;
+      recs.push({
+        id: 'rec_priority',
+        type: 'Priority Escalation',
+        typeBadge: 'PRIORITIZE',
+        rank: 4,
+        title: `Escalate to ${newPriority} priority`,
+        description: `Raising priority from ${order.priority} to ${newPriority} moves this order ahead in the scheduling queue. Resources are allocated before lower-priority orders, reducing queue wait time.`,
+        stage: null,
+        originalETD: order.eta,
+        newETD: addWorkDays(order.eta || order.dueDate, -delayReduction),
+        delayReductionDays: delayReduction,
+        residualDelayDays: Math.max(0, delayDays - delayReduction),
+        impactLevel: 'Medium',
+        disruption: 'Medium',
+        feasible: true,
+        affectedResources: [],
+        affectedEquipment: [],
+        actionType: 'priority_escalation',
+        actionPayload: { newPriority },
+      });
+    }
+
+    // ── 5. Resequence Queue ───────────────────────────────────────────────
+    if (delayDays >= 2) {
+      const delayReduction = Math.min(delayDays, 2);
+      recs.push({
+        id: 'rec_resequence',
+        type: 'Queue Resequencing',
+        typeBadge: 'RESEQUENCE',
+        rank: 5,
+        title: 'Move order to front of stage queue',
+        description: `Resequence this order to the front of the ${analysis.bottleneckStage || order.currentStage || 'current stage'} queue. Defer lower-priority orders scheduled on the same equipment during the same window.`,
+        stage: analysis.bottleneckStage,
+        originalETD: order.eta,
+        newETD: addWorkDays(order.eta || order.dueDate, -delayReduction),
+        delayReductionDays: delayReduction,
+        residualDelayDays: Math.max(0, delayDays - delayReduction),
+        impactLevel: 'Medium',
+        disruption: 'High',
+        feasible: true,
+        affectedResources: [],
+        affectedEquipment: [],
+        actionType: 'resequence',
+        actionPayload: { targetStage: analysis.bottleneckStage },
+      });
+    }
+
+    // Sort by delay reduction desc, then disruption asc
+    const disruptionScore = { Low: 1, Medium: 2, High: 3 };
+    recs.sort((a, b) => {
+      const dr = b.delayReductionDays - a.delayReductionDays;
+      if (dr !== 0) return dr;
+      return (disruptionScore[a.disruption] || 2) - (disruptionScore[b.disruption] || 2);
+    });
+
+    // Re-rank after sort
+    recs.forEach((r, i) => { r.rank = i + 1; });
+    return recs;
+  }
+};
 
 // ============================================================
 // RESOURCE ASSIGNMENT MODAL (Lock Operator to Stage)
@@ -2206,6 +2579,195 @@ function ResourceAssignModal({ order, stage, stageData, existingLock, onSave, on
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// RECOMMENDATION PANEL COMPONENT
+// ============================================================
+function RecommendationPanel({ order, lockedAssignments, onApply }) {
+  const [status, setStatus] = useState('idle'); // idle | thinking | ready
+  const [recs, setRecs] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [appliedIds, setAppliedIds] = useState([]);
+  const [rejectedIds, setRejectedIds] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
+
+  const canGenerate = order && (order.isDelayed || order.isAtRisk);
+
+  function handleGenerate() {
+    setStatus('thinking');
+    setRecs([]);
+    setSelectedId(null);
+    setTimeout(() => {
+      const a = delayAnalysisService.analyze(order);
+      const r = recommendationService.generate(order, lockedAssignments);
+      setAnalysis(a);
+      setRecs(r);
+      setStatus('ready');
+    }, 1400);
+  }
+
+  function handleApply(rec) {
+    setAppliedIds(prev => [...prev, rec.id]);
+    setSelectedId(null);
+    if (onApply) onApply(rec, order);
+  }
+
+  function handleReject(rec) {
+    setRejectedIds(prev => [...prev, rec.id]);
+    if (selectedId === rec.id) setSelectedId(null);
+  }
+
+  const isApplied = id => appliedIds.includes(id);
+  const isRejected = id => rejectedIds.includes(id);
+
+  return (
+    <div className="rec-panel">
+      <div className="drawer-section-title" style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
+        <span style={{display:'flex',alignItems:'center',gap:'6px'}}>
+          <span style={{fontSize:'13px'}}>🤖</span>
+          <span>AI Recommendations</span>
+        </span>
+        {recs.length > 0 && status === 'ready' && (
+          <span style={{fontFamily:'var(--mono)',fontSize:'9px',color:'var(--accent-purple)'}}>
+            {recs.filter(r=>!isRejected(r.id)).length} available
+          </span>
+        )}
+      </div>
+
+      {!canGenerate && (
+        <div style={{padding:'12px',background:'var(--bg-elevated)',borderRadius:'6px',border:'1px solid var(--border)',textAlign:'center'}}>
+          <div style={{fontSize:'11px',color:'var(--text-muted)'}}>✓ Order is on track — no recommendations needed</div>
+        </div>
+      )}
+
+      {canGenerate && status === 'idle' && (
+        <div>
+          <div style={{padding:'10px 12px',background:'var(--accent-red-dim)',border:'1px solid var(--accent-red)33',borderRadius:'6px',marginBottom:'10px'}}>
+            <div style={{fontSize:'11px',color:'var(--accent-red)',fontWeight:600,marginBottom:'2px'}}>
+              {order.isDelayed ? `⚠ Delayed by ${order.delayDays} day${order.delayDays!==1?'s':''}` : '⚡ At Risk'}
+            </div>
+            <div style={{fontSize:'11px',color:'var(--text-secondary)'}}>{order.delayReason || 'Capacity constraint detected'}</div>
+          </div>
+          <button className="rec-generate-btn" onClick={handleGenerate}>
+            <span>🤖</span> Generate AI Recommendations
+          </button>
+        </div>
+      )}
+
+      {status === 'thinking' && (
+        <div className="rec-thinking">
+          <div className="rec-thinking-dot"></div>
+          <div>
+            <div style={{fontWeight:600,marginBottom:'2px'}}>Analysing schedule constraints…</div>
+            <div style={{fontSize:'10px',color:'var(--text-muted)'}}>Evaluating overtime, alternate resources, equipment, priority scenarios</div>
+          </div>
+        </div>
+      )}
+
+      {status === 'ready' && (
+        <div className="fade-in">
+          {/* Root cause analysis */}
+          {analysis && analysis.rootCauses.length > 0 && (
+            <div className="delay-analysis-box">
+              <div style={{fontFamily:'var(--mono)',fontSize:'9px',color:'var(--text-muted)',letterSpacing:'0.8px',textTransform:'uppercase',marginBottom:'8px'}}>
+                Root Cause Analysis — {analysis.totalDelayDays}d total delay
+              </div>
+              {analysis.rootCauses.slice(0,3).map((c,i) => (
+                <div key={i} className="delay-root-cause">
+                  <div className="delay-cause-icon">{c.icon}</div>
+                  <div className="delay-cause-text">
+                    {c.stage && <span style={{color:'var(--accent-amber)',fontWeight:600}}>{c.stage}: </span>}
+                    {c.description}
+                  </div>
+                  {c.delayContribution > 0 && (
+                    <div className="delay-cause-days">+{c.delayContribution}d</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recommendation cards */}
+          {recs.filter(r => !isRejected(r.id)).length === 0 && (
+            <div style={{padding:'12px',textAlign:'center',color:'var(--text-muted)',fontSize:'11px',fontFamily:'var(--mono)'}}>
+              All recommendations rejected or no mitigations available.
+            </div>
+          )}
+
+          {recs.map(rec => {
+            if (isRejected(rec.id)) return null;
+            const applied = isApplied(rec.id);
+            const selected = selectedId === rec.id;
+            const reductionPct = rec.delayReductionDays > 0 && (order.delayDays || 0) > 0
+              ? Math.round(rec.delayReductionDays / (order.delayDays||1) * 100) : 0;
+
+            return (
+              <div key={rec.id}
+                className={`rec-card ${selected?'selected':''} ${applied?'applied':''}`}>
+                <div className="rec-card-header" onClick={() => !applied && setSelectedId(selected ? null : rec.id)}>
+                  <div className={`rec-rank ${rec.rank===1?'top':''}`}>{rec.rank}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'4px',flexWrap:'wrap'}}>
+                      <span className="rec-type-badge">{rec.typeBadge}</span>
+                      {rec.rank === 1 && <span style={{fontFamily:'var(--mono)',fontSize:'9px',color:'#f59e0b'}}>⭐ BEST</span>}
+                      {applied && <span className="rec-applied-tag">✓ Applied</span>}
+                    </div>
+                    <div className="rec-title">{rec.title}</div>
+                    {selected && !applied && (
+                      <div className="rec-desc" style={{marginTop:'4px'}}>{rec.description}</div>
+                    )}
+                  </div>
+                  <div style={{flexShrink:0}}>
+                    <div className="rec-etd-improvement">
+                      -{rec.delayReductionDays}d
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rec-impact">
+                  <div className="rec-impact-item">
+                    <span className="rec-impact-label">Original ETD</span>
+                    <span className="rec-impact-val" style={{color:'var(--accent-red)',textDecoration:'line-through',fontSize:'11px'}}>{rec.originalETD}</span>
+                  </div>
+                  <span style={{color:'var(--text-muted)',fontSize:'14px'}}>→</span>
+                  <div className="rec-impact-item">
+                    <span className="rec-impact-label">New ETD</span>
+                    <span className={`rec-impact-val ${rec.residualDelayDays === 0 ? 'green' : rec.residualDelayDays <= 1 ? 'amber' : 'red'}`}>{rec.newETD}</span>
+                  </div>
+                  <div className="rec-impact-item" style={{marginLeft:'auto'}}>
+                    <span className="rec-impact-label">Delay Saved</span>
+                    <span className="rec-impact-val green">-{rec.delayReductionDays}d ({reductionPct}%)</span>
+                  </div>
+                  <div className="rec-impact-item">
+                    <span className="rec-impact-label">Disruption</span>
+                    <span className={`rec-impact-val ${rec.disruption==='Low'?'green':rec.disruption==='Medium'?'amber':'red'}`}>{rec.disruption}</span>
+                  </div>
+                </div>
+
+                {selected && !applied && (
+                  <div className="rec-actions">
+                    <button className="rec-apply-btn" onClick={() => handleApply(rec)}>
+                      ✓ Apply Recommendation
+                    </button>
+                    <button className="rec-reject-btn" onClick={() => handleReject(rec)}>
+                      ✕ Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Regenerate */}
+          <button className="rec-generate-btn" onClick={handleGenerate}
+            style={{background:'var(--bg-elevated)',border:'1px solid var(--border-accent)',marginTop:'6px',fontSize:'11px'}}>
+            ↺ Regenerate
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2377,6 +2939,17 @@ function OrderDetailDrawer({ order, override, onClose, lockedAssignments, onLock
                 </div>
               );
             })}
+          </div>
+          {/* ── AI Recommendation Panel ── */}
+          <div style={{paddingTop:'4px',borderTop:'1px solid var(--border)',marginTop:'8px'}}>
+            <RecommendationPanel
+              order={order}
+              lockedAssignments={lockedAssignments}
+              onApply={(rec, ord) => {
+                // Apply recommendation: update via onOptimize with context
+                if (onOptimize) onOptimize();
+              }}
+            />
           </div>
         </div>
       </div>
@@ -2930,6 +3503,9 @@ function PlannerChatbot({ orders, utilization, setScreen }) {
     'Orders at risk?',
     'Show ETD summary',
     'Show locked assignments',
+    'Show recommendations',
+    'Why is PO-1003 delayed?',
+    'What if overtime is added?',
   ];
 
   useEffect(() => {
@@ -3230,7 +3806,7 @@ function LoginPage({ onLogin }) {
         </button>
         <div className="login-divider" />
         <div className="login-hint">
-          Demo credentials: planner / demo123 &nbsp;|&nbsp; manager / demo123
+          Demo credentials: planner / demo123  |  manager / demo123
         </div>
         <div className="login-footer">
           © {new Date().getFullYear()} SecondBrains. All rights reserved.
@@ -3249,7 +3825,7 @@ function Root() {
       <AppWithUser user={user} onLogout={() => setUser(null)} />
       <div className="app-footer">
         <span className="app-footer-text">
-          © {new Date().getFullYear()} SecondBrains — The Art of Intelligence &nbsp;|&nbsp; AI Production Planning &nbsp;|&nbsp; Signed in as <strong style={{color:'var(--text-secondary)'}}>{user.name}</strong> ({user.role})
+          © {new Date().getFullYear()} SecondBrains — The Art of Intelligence  |  AI Production Planning  |  Signed in as <strong style={{color:'var(--text-secondary)'}}>{user.name}</strong> ({user.role})
         </span>
       </div>
     </div>
